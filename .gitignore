@@ -1,0 +1,8 @@
+# Entorno
+.venv/
+__pycache__/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Datos: contienen información personal, nunca se suben a un repositorio
+data/
