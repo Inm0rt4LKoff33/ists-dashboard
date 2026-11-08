@@ -237,6 +237,204 @@ Si OneDrive guarda versiones anteriores, también te sirve de respaldo: en
 onedrive.com → archivo → **Historial de versiones** puedes volver a la carga
 de un periodo anterior.
 
+## 6. Agregar un reporte de un tipo que no existía
+
+Hay dos situaciones muy distintas que parecen lo mismo ("un Excel nuevo"):
+
+- **Un periodo más de un reporte que ya conoces** (otro archivo de
+  matrículas, retiros o aptitud): es el caso de la sección 5. Se copia a
+  `data/raw/<tipo>/`, se corre el pipeline y el archivo que subes a OneDrive
+  **sigue siendo el mismo `observatorio_ists.xlsx`**, solo que con más filas.
+  No tocas nada en Power BI.
+- **Un reporte de un tipo nuevo** (por ejemplo, evaluación docente o uso del
+  EVA, que no están en el contrato actual): esto sí requiere cambios, pero
+  **tampoco es un archivo nuevo para Power BI**. Sigue siendo el mismo
+  `observatorio_ists.xlsx`; lo que cambia es que ese archivo trae una hoja
+  (tabla) más.
+
+Pasos para el segundo caso:
+
+1. En el proyecto, sigue "Agregar un tipo de reporte nuevo" del
+   [README](../README.md): declara el contrato en `etl/config.py`, el lector
+   en `etl/extract.py` y regístralo en `FACT_SHEETS` (`etl/load.py`).
+2. Corre el pipeline. `observatorio_ists.xlsx` ahora trae una tabla
+   `fact_<tipo>` nueva, además de las que ya tenía.
+3. Sube el archivo a OneDrive **con el mismo nombre de siempre** (reemplazar,
+   igual que en la sección 5). No crees un archivo ni un modelo semántico
+   aparte: todo sigue viviendo en el mismo Excel.
+4. Aquí está el punto importante: **"Actualizar ahora" no agrega tablas
+   nuevas al modelo**, solo refresca los datos de las tablas que el modelo ya
+   conoce. Para que Power BI vea la tabla nueva, entra al modelo semántico →
+   **⋯ → Editar tablas** (o **Transformar datos** / **Obtener datos → Excel**
+   sobre el mismo archivo) y selecciona también la tabla nueva
+   **(verificar)**. El nombre exacto de esta opción varía según la versión.
+5. Si la tabla nueva comparte `periodo` y `carrera` con las demás, créale sus
+   relaciones hacia `dim_periodo` y `dim_carrera` (sección 2), y arma su
+   página en el informe (sección 4) y sus medidas si las necesita (sección 3).
+
+En resumen: **nunca reemplazas el archivo "por completo" en el sentido de
+borrar y empezar un modelo nuevo.** Siempre es el mismo archivo y el mismo
+modelo semántico; lo único que cambia entre un periodo normal y un reporte
+nuevo es si, además de reemplazar el archivo, tienes que entrar al modelo a
+decirle que ahora existe una tabla más.
+
+## 7. Navegación e interactividad avanzada
+
+Esta sección va sobre la experiencia del informe ya armado (sección 4): un
+panel de navegación tipo "app", botones, filtros que solo afectan a una
+página, una página de detalle al hacer clic en un dato, y tooltips propios.
+Todo esto se hace con el editor web, sin Power BI Desktop.
+
+### 7.1 Ocultar las pestañas nativas (opcional)
+
+Por defecto, Power BI pone una pestaña por página abajo del lienzo. Si vas a
+armar tu propio panel de navegación, conviene ocultar esas pestañas para que
+no queden duplicadas con tus botones:
+
+1. Clic derecho sobre la pestaña de la página → **Ocultar página**.
+2. La página sigue existiendo y tú (como editor) la sigues viendo atenuada
+   en la lista; quien solo consume el informe ya no la ve como pestaña, pero
+   sí puede llegar a ella por un botón o un navegador de páginas.
+
+Hazlo en todas las páginas **excepto** la primera (la que se abre al entrar).
+
+### 7.2 Panel de navegación automático: el visual "Navegador de páginas"
+
+Es la forma más rápida de tener un menú lateral o superior, y se actualiza
+solo si agregas, quitas o reordenas páginas (no hay que mantenerlo a mano):
+
+1. En **Visualizaciones**, busca **Navegador de páginas** y arrástralo al
+   lienzo (por ejemplo, una franja angosta a la izquierda).
+2. En el panel de formato: **Páginas** controla qué páginas incluye (puedes
+   excluir alguna) **(verificar)**; **Diseño** cambia entre horizontal y
+   vertical; **Relleno** y **Texto** dejan ponerle íconos o solo texto, y
+   resaltar la página activa con otro color.
+3. Copia este visual (Ctrl+C) y pégalo (Ctrl+V) en cada página, en la misma
+   posición, para que el menú se vea igual en todo el informe. Power BI no
+   tiene "páginas maestras" en la licencia gratuita: cada copia es
+   independiente, así que si lo cambias de estilo, repite el cambio en cada
+   página.
+
+### 7.3 Panel manual con botones (más control que el navegador automático)
+
+Úsalo si quieres agrupar botones con un título, un ícono de inicio, o
+separar "páginas" de "acciones" (como un botón de reinicio, sección 7.4):
+
+1. **Insertar → Botones** → elige un estilo en blanco o uno con ícono.
+2. En el panel de formato del botón, pestaña **Acción**: actívala,
+   **Tipo = Página**, **Destino =** la página de destino.
+3. Repite un botón por página, alinéalos con **Formato → Organizar →
+   Alinear** y **Distribuir**, y agrúpalos (selección múltiple → clic
+   derecho → **Agrupar**) para moverlos juntos.
+4. Igual que el navegador automático, se copia y pega en cada página. Para
+   marcar "en qué página estoy", distingue en cada copia el botón de esa
+   página con otro color de relleno (es manual: no se resalta solo).
+
+### 7.4 Botón para restablecer filtros (marcadores / bookmarks)
+
+Los marcadores (**Ver → Marcadores**) guardan el estado de filtros y
+selección de una página, y un botón puede volver a ese estado con un clic.
+Ejemplo útil: un botón "Restablecer filtros" en la página Resumen.
+
+1. Entra a la página sin ningún filtro de segmentador aplicado.
+2. **Ver → Marcadores → Agregar**. Dale un nombre, por ejemplo
+   `Resumen - sin filtros`.
+3. En las opciones del marcador (⋯), confirma que **Datos** esté marcado
+   (captura los filtros/selecciones) — así el marcador "recuerda" el estado
+   sin filtros.
+4. Inserta un botón de texto "Restablecer filtros". **Acción → Tipo =
+   Marcador → Marcador =** el que creaste.
+
+El mismo mecanismo sirve para mostrar/ocultar un panel (por ejemplo, un
+panel de ayuda): agrupa los objetos del panel, crea un marcador con el panel
+visible y otro con el panel oculto (usando el **panel de Selección**, **Ver
+→ Selección**, para cambiar el ícono del ojo), y un botón que alterne entre
+ambos.
+
+### 7.5 Filtros que solo afectan a una página
+
+Ya viste el segmentador normal (sección 4), que por defecto solo filtra la
+página donde está. Para decidir con más control qué segmentador aparece y
+filtra en qué páginas, usa **Ver → Sincronizar segmentaciones**:
+
+- Junto a cada segmentador aparecen dos columnas por página:
+  **Sincronizar** (si esa página se filtra también) y **Visible** (si el
+  segmentador se muestra ahí).
+- Para un filtro global de verdad (como `dim_periodo[periodo]`): pon
+  Sincronizar y Visible en las 4 páginas.
+- Para un filtro que solo tiene sentido en una página (como
+  `fact_aptitud[estado_proyecto]` en Titulación): dejas Sincronizar y
+  Visible marcados solo en esa página, y lo quitas de las demás.
+
+Si en lugar de un segmentador interactivo quieres un filtro fijo que el
+usuario no pueda tocar (por ejemplo, excluir filas sin carrera en una
+página puntual), arrastra el campo al panel **Filtros**, en el bloque
+**Filtros de esta página** (no **de este objeto visual** ni **de todas las
+páginas**).
+
+### 7.6 Ir al detalle: página de "profundización" (drillthrough)
+
+Permite hacer clic derecho sobre un dato (por ejemplo, una barra de
+"Inscripciones por carrera") y saltar a una página de detalle ya filtrada
+por esa carrera, sin que el usuario arme el filtro a mano.
+
+1. Crea una página nueva, por ejemplo **"Detalle de carrera"**, y ocúltala
+   (sección 7.1): a esta página solo se llega haciendo clic derecho.
+2. En el panel **Filtros** de esa página, arrastra `dim_carrera[carrera]` al
+   bloque **Agregar categorías de profundización**.
+3. Power BI agrega un botón **Atrás** automático en la esquina. Arma ahí
+   visuales de detalle que crucen los tres reportes para una sola carrera:
+   por ejemplo, una tabla con sus inscripciones, su tasa de aptitud y sus
+   retiros.
+4. Pruébalo en la página Resumen: clic derecho sobre una barra de
+   "Inscripciones por carrera" → **Detalles → Detalle de carrera**. La
+   página nueva se abre ya filtrada a esa carrera.
+
+### 7.7 Información al pasar el mouse: tooltip con tu propia página
+
+En vez del tooltip estándar (una cajita con el valor), puedes mostrar una
+mini página al pasar el mouse sobre un dato:
+
+1. Crea una página pequeña, por ejemplo **"Tooltip carrera"**. En
+   **Formato de la página → Tamaño**, elige **Personalizado** y usa algo
+   como 320 × 240 px.
+2. En **Formato de la página → Información de la página**, activa
+   **Permitir usar como información sobre herramientas**.
+3. Agrégale 1-2 visuales pequeños (una tarjeta con la tasa de aptitud de la
+   carrera, por ejemplo) y ocúltala (sección 7.1).
+4. En el visual donde quieres que aparezca (otra vez, "Inscripciones por
+   carrera"): **Formato → Información sobre herramientas → Tipo = Página de
+   informe → Página = Tooltip carrera**.
+
+**(verificar)** estos tres (marcadores, profundización y tooltip de página)
+son funciones estándar del editor, pero no pude confirmar que se vean
+exactamente igual en una cuenta gratuita dentro de **Mi área de trabajo**;
+si algún panel no aparece con ese nombre, búscalo en la pestaña de formato
+de la página o del visual, el nombre cambia poco entre versiones.
+
+### 7.8 Evitar que un clic filtre visuales que no debería
+
+Por defecto, hacer clic en un dato de un visual resalta o filtra a los
+demás visuales de la página. Si un gráfico no debería reaccionar a ese
+clic, selecciona el visual que originó el clic → **Formato → Editar
+interacciones**; sobre cada otro visual aparecen tres íconos para elegir
+**Filtrar**, **Resaltar** o **Ninguna**.
+
+### 7.9 Orden sugerido para armarlo
+
+No hace falta todo a la vez. Un orden razonable, de más a menos impacto por
+el tiempo que toma:
+
+1. Navegador de páginas (7.2) en las 4 páginas — 15-20 minutos, impacto
+   visual inmediato.
+2. Ocultar pestañas nativas (7.1), una vez el navegador ya funciona.
+3. Sincronizar segmentadores (7.5) para que el filtro de periodo/carrera
+   sea realmente global.
+4. Página de profundización por carrera (7.6).
+5. Botón de restablecer filtros (7.4).
+6. Tooltips personalizados (7.7) — es el más cosmético, déjalo para el
+   final.
+
 ## Limitaciones de la licencia gratuita
 
 - La subida a OneDrive sigue siendo manual (desde Linux no hay cliente
